@@ -1,84 +1,128 @@
-# Turborepo starter
+# Windfall - Collaborative Investment Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+## Overview
 
-## Using this example
+Windfall is a decentralized platform that enables groups to collectively manage and invest assets through shared investment funds. Built on the Aptos Protocol, it provides a secure and transparent way for investment clubs, DAOs, and other collective entities to pool resources and execute investment strategies together.
 
-Run the following command:
+## Key Features
 
-```sh
-npx create-turbo@latest
+### Collaborative Fund Management
+- Create shared investment funds with multiple participants
+- Democratic fund governance through member voting
+- Transparent execution of investment decisions
+- Real-time tracking of fund performance and activities
+- Flexible metadata system for fund customization
+
+### Group Investment Features
+- Pool resources with trusted partners
+- Designated fund executors for efficient operation
+- Multi-member participation and oversight
+- Transparent transaction history
+- Customizable fund parameters and rules
+
+### Asset Management
+- Create and manage digital assets collectively:
+  - Customizable asset properties
+  - Shared ownership tracking
+  - Group-controlled supply management
+  - Collaborative minting and burning decisions
+
+### Security and Trust
+- Minimum verification requirements for participants
+- Permission-based access control
+- Secure multi-party transaction execution
+- Address-based member authorization
+- Transparent operation history
+
+## Project Structure
+
+```
+windfall/
+├── apps/
+│   ├── backend/      # Backend services
+│   ├── contracts/    # Move smart contracts
+│   └── frontend/     # Web interface
 ```
 
-## What's inside?
+## How It Works
 
-This Turborepo includes the following packages/apps:
+### Fund Creation and Management
+1. **Fund Initialization**
+   - Create a new fund with defined parameters
+   - Set fund name, description, and executor
+   - Add initial members and contributors
+   - Define fund metadata and rules
 
-### Apps and Packages
+2. **Collaborative Operations**
+   - Members can propose transactions
+   - Executor manages fund operations
+   - Transparent tracking of all activities
+   - Real-time fund status updates
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+3. **Asset Control**
+   - Group-controlled asset management
+   - Collective decision-making on investments
+   - Shared ownership tracking
+   - Transparent supply management
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Getting Started
 
-### Utilities
+### Prerequisites
+- Move CLI
+- Node.js
+- pnpm (Package Manager)
 
-This Turborepo has some additional tools already setup for you:
+### Installation
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
+1. Clone the repository:
+```bash
+git clone https://github.com/saint0x/windfall.git
+cd windfall
 ```
-cd my-turborepo
+
+2. Install dependencies:
+```bash
+pnpm install
+```
+
+3. Build the project:
+```bash
 pnpm build
 ```
 
-### Develop
+## Development
 
-To develop all apps and packages, run the following command:
+To start the development environment:
 
-```
-cd my-turborepo
+```bash
 pnpm dev
 ```
 
-### Remote Caching
+## Testing
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+Run the test suite:
 
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
+```bash
+pnpm test
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Use Cases
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+- Investment Clubs
+- Decentralized Autonomous Organizations (DAOs)
+- Group Investment Portfolios
+- Collective Asset Management
+- Shared Trading Accounts
+- Community Investment Funds
 
-```
-npx turbo link
-```
+## Contributing
 
-## Useful Links
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
 
-Learn more about the power of Turborepo:
+## License
 
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+This project is licensed under the MIT License - see the LICENSE file for details.
