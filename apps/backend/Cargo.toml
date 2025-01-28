@@ -1,0 +1,19 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+aptos-sdk = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "2c74a776d5e3b8b3d3f5c77e7e9dc10f4b4c7bc5" }
+chrono = { version = "0.4", features = ["serde"] }
+hex = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+url = "2.4"
+
+[dev-dependencies]
+tokio-test = "0.4"

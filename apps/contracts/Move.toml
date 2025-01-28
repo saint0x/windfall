@@ -1,0 +1,17 @@
+[package]
+name = "Windfall"
+version = "1.0.0"
+authors = []
+
+[addresses]
+windfall = "_"
+
+[dev-addresses]
+windfall = "0x1"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-framework" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-stdlib" }
+AptosToken = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-token" }
+
+[dev-dependencies]
