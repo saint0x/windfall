@@ -42,3 +42,39 @@ target/
 **/*.rs.bk
 Cargo.lock
 debug/
+*.rlib
+*.rmeta
+*.d
+*.dll
+*.dylib
+*.so
+*.o
+.cargo-lock
+.rustc_info.json
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+*.db
