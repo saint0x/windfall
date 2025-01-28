@@ -69,8 +69,7 @@ windfall/
 
 ### Prerequisites
 - Move CLI
-- Node.js
-- pnpm (Package Manager)
+- Bun (JavaScript Runtime & Package Manager)
 
 ### Installation
 
@@ -82,12 +81,12 @@ cd windfall
 
 2. Install dependencies:
 ```bash
-pnpm install
+bun install
 ```
 
 3. Build the project:
 ```bash
-pnpm build
+bun run build
 ```
 
 ## Development
@@ -95,7 +94,7 @@ pnpm build
 To start the development environment:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 ## Testing
@@ -103,7 +102,7 @@ pnpm dev
 Run the test suite:
 
 ```bash
-pnpm test
+bun test
 ```
 
 ## Use Cases
