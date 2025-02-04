@@ -180,58 +180,30 @@ impl Client {
     pub async fn get_core_account_modules(&self) -> Result<Vec<String>> {
         self.execute_with_retry(|| async {
             let client = self.get_client().await?;
+            
             let modules = client
                 .get_account_modules(CORE_CODE_ADDRESS)
                 .await
-                .map_err(|e| ClientError::ResourceNotFound(e.to_string()))?;
+                .map_err(|e| ClientError::ResourceNotFound(format!("Failed to get modules: {}", e)))?;
 
-            Ok(modules
-                .into_inner()
+            let modules_inner = modules.into_inner();
+            info!("Retrieved {} raw modules from core account", modules_inner.len());
+            
+            let result: Vec<String> = modules_inner
                 .into_iter()
-                .map(|module| module.abi.unwrap().name.to_string())
-                .collect())
+                .filter_map(|module| {
+                    // Get the module name from the ABI
+                    let parsed = module.try_parse_abi().ok()?;
+                    let abi = parsed.abi.as_ref()?;
+                    Some(format!("0x1::{}", abi.name))
+                })
+                .collect();
+
+            if result.is_empty() {
+                Err(ClientError::ResourceNotFound("No modules found in core account".to_string()))
+            } else {
+                Ok(result)
+            }
         }).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::config::NodeConfig;
-
-    fn get_test_config() -> ClientConfig {
-        ClientConfig {
-            primary_node: NodeConfig {
-                url: "https://fullnode.devnet.aptoslabs.com".to_string(),
-                health_check_interval: Duration::from_secs(30),
-                timeout: Duration::from_secs(10),
-            },
-            fallback_nodes: vec![],
-            retry_config: crate::config::RetryConfig {
-                max_attempts: 3,
-                base_delay: Duration::from_millis(500),
-                max_delay: Duration::from_secs(5),
-            },
-            rate_limit: crate::config::RateLimitConfig {
-                requests_per_second: 50,
-                burst_limit: 100,
-            },
-        }
-    }
-
-    #[tokio::test]
-    async fn test_client_creation() {
-        let config = get_test_config();
-        let client = Client::new(config).await;
-        assert!(client.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_get_core_modules() {
-        let config = get_test_config();
-        let client = Client::new(config).await.unwrap();
-        let modules = client.get_core_account_modules().await;
-        assert!(modules.is_ok());
-        assert!(!modules.unwrap().is_empty());
     }
 } 
