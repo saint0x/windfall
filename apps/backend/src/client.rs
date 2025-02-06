@@ -100,7 +100,7 @@ impl Client {
                     if attempts < self.config.retry_config.max_attempts {
                         sleep(delay).await;
                         delay = std::cmp::min(
-                            delay * 2,
+                            delay + self.config.retry_config.base_delay,
                             self.config.retry_config.max_delay
                         );
                     }
@@ -108,7 +108,7 @@ impl Client {
             }
         }
 
-        Err(last_error.unwrap_or(AppError::Internal("Retry failed with no error".to_string())))
+        Err(last_error.unwrap_or_else(|| AppError::Internal("Retry failed with no error".to_string())))
     }
 
     pub async fn get_account_balance(&self, address: AccountAddress) -> Result<u64> {

@@ -2,7 +2,8 @@ use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use dotenv::dotenv;
 use log::{info, error};
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use tokio::time::Duration;
 
 use backend::{
     api::{routes, events::EventListener},
@@ -58,7 +59,7 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         let synchronizer = BlockchainSynchronizer::new(
             (*sync_state).clone(),
-            Duration::from_secs(60), // Sync every minute
+            Duration::from_secs(10), // More conservative sync interval
         );
         if let Err(e) = synchronizer.start().await {
             error!("Blockchain synchronizer error: {}", e);

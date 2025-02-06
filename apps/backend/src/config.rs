@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use tokio::time::Duration;
+use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeConfig {
-    pub url: String,
+    pub url: Url,
     pub health_check_interval: Duration,
     pub timeout: Duration,
 }
@@ -33,17 +34,15 @@ impl Default for ClientConfig {
     fn default() -> Self {
         Self {
             primary_node: NodeConfig {
-                url: "https://fullnode.mainnet.aptoslabs.com".to_string(),
+                url: Url::parse("https://fullnode.mainnet.aptoslabs.com").unwrap(),
                 health_check_interval: Duration::from_secs(30),
                 timeout: Duration::from_secs(10),
             },
-            fallback_nodes: vec![
-                NodeConfig {
-                    url: "https://fullnode.testnet.aptoslabs.com".to_string(),
-                    health_check_interval: Duration::from_secs(30),
-                    timeout: Duration::from_secs(10),
-                },
-            ],
+            fallback_nodes: vec![NodeConfig {
+                url: Url::parse("https://fullnode.testnet.aptoslabs.com").unwrap(),
+                health_check_interval: Duration::from_secs(30),
+                timeout: Duration::from_secs(10),
+            }],
             retry_config: RetryConfig {
                 max_attempts: 3,
                 base_delay: Duration::from_millis(500),

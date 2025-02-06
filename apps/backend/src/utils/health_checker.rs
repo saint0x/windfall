@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use tokio::time::{Duration, Instant};
 use aptos_sdk::rest_client::Client as AptosRestClient;
 use url::Url;
 use crate::error::{AppError, Result};
@@ -10,15 +10,16 @@ use crate::config::NodeConfig;
 const HEALTH_CHECK_INTERVAL: Duration = Duration::from_secs(60);
 const MAX_CONSECUTIVE_FAILURES: u32 = 3;
 
-pub struct HealthChecker {
-    node_health: Arc<RwLock<HashMap<String, NodeHealth>>>,
-}
-
+#[derive(Debug)]
 struct NodeHealth {
     client: AptosRestClient,
     last_check: Instant,
     healthy: bool,
     consecutive_failures: u32,
+}
+
+pub struct HealthChecker {
+    node_health: Arc<RwLock<HashMap<String, NodeHealth>>>,
 }
 
 impl HealthChecker {
@@ -29,10 +30,7 @@ impl HealthChecker {
     }
 
     pub async fn add_node(&self, config: &NodeConfig) -> Result<()> {
-        let url = Url::parse(&config.url)
-            .map_err(|e| AppError::config_error(&e.to_string()))?;
-            
-        let client = AptosRestClient::new(url);
+        let client = AptosRestClient::new(config.url.clone());
         
         // Perform initial health check
         let initial_health = self.check_node_health_internal(&client).await?;
@@ -45,7 +43,7 @@ impl HealthChecker {
         };
 
         let mut health = self.node_health.write().await;
-        health.insert(config.url.clone(), node_health);
+        health.insert(config.url.to_string(), node_health);
         Ok(())
     }
 
@@ -79,13 +77,14 @@ impl HealthChecker {
     }
 
     pub async fn get_healthy_client(&self) -> Result<AptosRestClient> {
+        let now = Instant::now();
         let mut health = self.node_health.write().await;
         
         for (_url, node) in health.iter_mut() {
             // Check if we need to perform a health check
             if node.last_check.elapsed() >= HEALTH_CHECK_INTERVAL {
                 node.healthy = self.check_node_health_internal(&node.client).await.unwrap_or(false);
-                node.last_check = Instant::now();
+                node.last_check = now;
                 
                 if !node.healthy {
                     node.consecutive_failures += 1;
@@ -104,7 +103,7 @@ impl HealthChecker {
             }
         }
 
-        Err(AppError::Internal("No healthy nodes available".to_string()))
+        Err(AppError::no_healthy_nodes())
     }
 
     async fn check_node_health_internal(&self, client: &AptosRestClient) -> Result<bool> {

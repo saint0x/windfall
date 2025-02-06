@@ -4,9 +4,8 @@ use crate::{
     db::operations,
 };
 use aptos_sdk::types::account_address::AccountAddress;
-use log::{info, error};
-use std::time::Duration;
-use tokio::time::sleep;
+use log::{info, error, warn};
+use tokio::time::{sleep, Duration};
 use std::str::FromStr;
 
 pub struct BlockchainSynchronizer {
@@ -25,8 +24,13 @@ impl BlockchainSynchronizer {
     pub async fn start(&self) -> Result<()> {
         info!("Starting blockchain synchronizer");
         loop {
-            if let Err(e) = self.sync_state().await {
-                error!("Error during state synchronization: {}", e);
+            match self.sync_state().await {
+                Ok(_) => {
+                    info!("State synchronization completed successfully");
+                }
+                Err(e) => {
+                    error!("Error during state synchronization: {}", e);
+                }
             }
             sleep(self.sync_interval).await;
         }
@@ -51,7 +55,7 @@ impl BlockchainSynchronizer {
             // Get fund state from blockchain
             let fund_address = AccountAddress::from_str(&fund.executor_address)?;
             let fund_resource = self.state.client
-                .get_resource::<FundResource>(fund_address, "0x1::fund::FundResource")
+                .get_resource::<FundResource>(fund_address, "0x1::windfall::fund::FundResource")
                 .await;
 
             match fund_resource {
@@ -67,7 +71,12 @@ impl BlockchainSynchronizer {
                     }
                 }
                 Err(e) => {
-                    error!("Failed to get fund resource for {}: {}", fund.id, e);
+                    // Only log as warning for resource not found, as this is expected for new funds
+                    if e.to_string().contains("ResourceNotFound") {
+                        warn!("Fund resource not found for {}: {}", fund.id, e);
+                    } else {
+                        error!("Failed to get fund resource for {}: {}", fund.id, e);
+                    }
                     continue;
                 }
             }
@@ -84,7 +93,7 @@ impl BlockchainSynchronizer {
             // Get member list from blockchain
             let fund_address = AccountAddress::from_str(&fund.executor_address)?;
             let members_resource = self.state.client
-                .get_resource::<MembersResource>(fund_address, "0x1::fund::MembersResource")
+                .get_resource::<MembersResource>(fund_address, "0x1::windfall::fund::MembersResource")
                 .await;
 
             match members_resource {
@@ -101,7 +110,12 @@ impl BlockchainSynchronizer {
                     }
                 }
                 Err(e) => {
-                    error!("Failed to get members resource for fund {}: {}", fund.id, e);
+                    // Only log as warning for resource not found
+                    if e.to_string().contains("ResourceNotFound") {
+                        warn!("Members resource not found for fund {}: {}", fund.id, e);
+                    } else {
+                        error!("Failed to get members resource for fund {}: {}", fund.id, e);
+                    }
                     continue;
                 }
             }
@@ -123,7 +137,7 @@ impl BlockchainSynchronizer {
             // Get asset state from blockchain
             let asset_address = AccountAddress::from_str(address)?;
             let asset_resource = self.state.client
-                .get_resource::<AssetResource>(asset_address, "0x1::asset::AssetResource")
+                .get_resource::<AssetResource>(asset_address, "0x1::windfall::asset::AssetResource")
                 .await;
 
             match asset_resource {
@@ -133,14 +147,19 @@ impl BlockchainSynchronizer {
                         operations::update_asset_state(
                             &self.state.db,
                             asset.id,
-                            resource.version,  // Keep as u64
-                            resource.total_supply,  // Keep as u64
+                            resource.version,
+                            resource.total_supply,
                             resource.holders,
                         ).await?;
                     }
                 }
                 Err(e) => {
-                    error!("Failed to get asset resource for {}: {}", asset.id, e);
+                    // Only log as warning for resource not found
+                    if e.to_string().contains("ResourceNotFound") {
+                        warn!("Asset resource not found for {}: {}", asset.id, e);
+                    } else {
+                        error!("Failed to get asset resource for {}: {}", asset.id, e);
+                    }
                     continue;
                 }
             }

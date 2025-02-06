@@ -25,11 +25,16 @@ impl EventListener {
         info!("Starting event listener service...");
         
         loop {
-            if let Err(e) = self.process_events().await {
-                error!("Error processing events: {}", e);
-                sleep(Duration::from_secs(5)).await;
+            match self.process_events().await {
+                Ok(_) => {
+                    self.last_processed_sequence = self.last_processed_sequence.saturating_add(100);
+                    sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    error!("Error processing events: {}", e);
+                    sleep(Duration::from_secs(5)).await;
+                }
             }
-            sleep(Duration::from_secs(1)).await;
         }
     }
 
@@ -46,8 +51,8 @@ impl EventListener {
 
     async fn process_asset_events(&mut self) -> Result<()> {
         let events = self.state.client.get_account_events(
-            AccountAddress::from_hex_literal("@windfall")?,
-            "windfall::asset::AssetEvents",
+            AccountAddress::from_hex_literal("0x1")?,
+            "0x1::windfall::asset::AssetEvents",
             "transfer_events",
             Some(self.last_processed_sequence),
             Some(100),
@@ -71,8 +76,8 @@ impl EventListener {
 
     async fn process_governance_events(&mut self) -> Result<()> {
         let events = self.state.client.get_account_events(
-            AccountAddress::from_hex_literal("@windfall")?,
-            "windfall::governance::GovernanceEvents",
+            AccountAddress::from_hex_literal("0x1")?,
+            "0x1::windfall::governance::GovernanceEvents",
             "proposal_events",
             Some(self.last_processed_sequence),
             Some(100),
@@ -110,8 +115,8 @@ impl EventListener {
 
     async fn process_registry_events(&mut self) -> Result<()> {
         let events = self.state.client.get_account_events(
-            AccountAddress::from_hex_literal("@windfall")?,
-            "windfall::registry::RegistryEvents",
+            AccountAddress::from_hex_literal("0x1")?,
+            "0x1::windfall::registry::RegistryEvents",
             "member_events",
             Some(self.last_processed_sequence),
             Some(100),
