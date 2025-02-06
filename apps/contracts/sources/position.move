@@ -6,6 +6,7 @@ module windfall::position {
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
+    use windfall::security;
 
     /// Error codes
     const ENOT_INITIALIZED: u64 = 1;
@@ -15,6 +16,12 @@ module windfall::position {
     const EINVALID_SHARE_AMOUNT: u64 = 5;
     const EINVALID_POSITION_SIZE: u64 = 6;
     const EINSUFFICIENT_SHARES: u64 = 7;
+    const EINVALID_AMOUNT: u64 = 8;
+    const EINVALID_PRICE: u64 = 9;
+    const EINSUFFICIENT_BALANCE: u64 = 10;
+    const EPOSITION_CLOSED: u64 = 11;
+
+    const MODULE_ID: u8 = 3; // Unique identifier for position module
 
     struct Position has store {
         id: u64,
@@ -108,13 +115,18 @@ module windfall::position {
     }
 
     public entry fun open_position(
-        actuator: &signer,
-        asset_symbol: String,
+        trader: &signer,
+        asset_id: u64,
         size: u64,
-        entry_price: u64
+        entry_price: u64,
+        is_long: bool
     ) acquires PositionData, PositionEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
         let position_data = borrow_global_mut<PositionData>(@windfall);
-        assert!(signer::address_of(actuator) == position_data.actuator, 
+        assert!(signer::address_of(trader) == position_data.actuator, 
             error::permission_denied(ENOT_AUTHORIZED));
 
         let position_id = position_data.next_position_id;
@@ -122,7 +134,7 @@ module windfall::position {
 
         table::add(&mut position_data.positions, position_id, Position {
             id: position_id,
-            asset_symbol: asset_symbol,
+            asset_symbol: asset_id.to_string(),
             total_size: size,
             entry_price: entry_price,
             entry_timestamp: current_time,
@@ -136,11 +148,13 @@ module windfall::position {
         let events = borrow_global_mut<PositionEvents>(@windfall);
         event::emit_event(&mut events.position_opened_events, PositionOpenedEvent {
             position_id,
-            asset_symbol,
+            asset_symbol: asset_id.to_string(),
             size,
             entry_price,
             timestamp: current_time,
         });
+
+        security::end_reentrancy_protection();
     }
 
     public entry fun allocate_shares(
@@ -271,5 +285,108 @@ module windfall::position {
         
         let share = table::borrow(user_positions, position_id);
         share.shares
+    }
+
+    public entry fun close_position(
+        trader: &signer,
+        position_id: u64,
+        exit_price: u64
+    ) acquires PositionData, PositionEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
+        let position_data = borrow_global_mut<PositionData>(@windfall);
+        assert!(signer::address_of(trader) == position_data.actuator, 
+            error::permission_denied(ENOT_AUTHORIZED));
+
+        let position = table::borrow(&position_data.positions, position_id);
+        assert!(position.is_active, error::invalid_state(EPOSITION_CLOSED));
+
+        let current_time = timestamp::now_microseconds();
+
+        let pnl = (exit_price - position.entry_price) * position.total_size / position.entry_price;
+
+        table::remove(&mut position_data.positions, position_id);
+
+        // Emit position closed event
+        let events = borrow_global_mut<PositionEvents>(@windfall);
+        event::emit_event(&mut events.position_closed_events, PositionClosedEvent {
+            position_id,
+            exit_price,
+            pnl,
+            timestamp: current_time,
+        });
+
+        security::end_reentrancy_protection();
+    }
+
+    public entry fun modify_position(
+        trader: &signer,
+        position_id: u64,
+        new_size: u64,
+        new_price: u64
+    ) acquires PositionData, PositionEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
+        let position_data = borrow_global_mut<PositionData>(@windfall);
+        assert!(signer::address_of(trader) == position_data.actuator, 
+            error::permission_denied(ENOT_AUTHORIZED));
+
+        let position = table::borrow(&position_data.positions, position_id);
+        assert!(position.is_active, error::invalid_state(EPOSITION_CLOSED));
+
+        let current_time = timestamp::now_microseconds();
+
+        position.total_size = new_size;
+        position.entry_price = new_price;
+        position.entry_timestamp = current_time;
+
+        // Emit position modified event
+        let events = borrow_global_mut<PositionEvents>(@windfall);
+        event::emit_event(&mut events.position_closed_events, PositionClosedEvent {
+            position_id,
+            exit_price: new_price,
+            pnl: 0, // Assuming pnl is not provided in the new_price
+            timestamp: current_time,
+        });
+
+        security::end_reentrancy_protection();
+    }
+
+    public entry fun liquidate_position(
+        liquidator: &signer,
+        position_id: u64,
+        liquidation_price: u64
+    ) acquires PositionData, PositionEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
+        let position_data = borrow_global_mut<PositionData>(@windfall);
+        assert!(signer::address_of(liquidator) == position_data.actuator, 
+            error::permission_denied(ENOT_AUTHORIZED));
+
+        let position = table::borrow(&position_data.positions, position_id);
+        assert!(position.is_active, error::invalid_state(EPOSITION_CLOSED));
+
+        let current_time = timestamp::now_microseconds();
+
+        let pnl = (liquidation_price - position.entry_price) * position.total_size / position.entry_price;
+
+        table::remove(&mut position_data.positions, position_id);
+
+        // Emit position liquidated event
+        let events = borrow_global_mut<PositionEvents>(@windfall);
+        event::emit_event(&mut events.position_closed_events, PositionClosedEvent {
+            position_id,
+            exit_price: liquidation_price,
+            pnl,
+            timestamp: current_time,
+        });
+
+        security::end_reentrancy_protection();
     }
 } 

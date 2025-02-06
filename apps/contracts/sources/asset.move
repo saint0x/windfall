@@ -9,6 +9,7 @@ module windfall::asset {
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
     use windfall::registry;
+    use aptos_framework::security;
 
     /// Error codes
     const ENOT_INITIALIZED: u64 = 1;
@@ -26,6 +27,8 @@ module windfall::asset {
 
     /// Minimum verification level required for asset operations
     const MIN_VERIFICATION_LEVEL: u8 = 1;
+
+    const MODULE_ID: u8 = 1; // Unique identifier for the asset module
 
     struct Asset has store {
         symbol: String,
@@ -206,6 +209,10 @@ module windfall::asset {
         symbol: String,
         amount: u64
     ) acquires AssetData, AssetEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+        
         let from_address = signer::address_of(from);
         
         // Verify user
@@ -262,6 +269,9 @@ module windfall::asset {
             amount: amount,
             transfer_time: timestamp::now_microseconds(),
         });
+
+        // End reentrancy protection
+        security::end_reentrancy_protection();
     }
 
     public entry fun mint(

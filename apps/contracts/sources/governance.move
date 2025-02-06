@@ -7,6 +7,7 @@ module windfall::governance {
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
     use windfall::registry;
+    use windfall::security;
 
     /// Error codes
     const ENOT_INITIALIZED: u64 = 1;
@@ -22,6 +23,8 @@ module windfall::governance {
 
     const PROPOSAL_DURATION: u64 = 86400000000; // 24 hours in microseconds
     const EMERGENCY_VETO_THRESHOLD: u64 = 30;   // 30% for emergency vetoes
+
+    const MODULE_ID: u8 = 2; // Unique identifier for governance module
 
     struct ProposalType has store, copy, drop {
         code: u8,
@@ -137,6 +140,10 @@ module windfall::governance {
         new_actuator: address,
         description: String
     ) acquires GovernanceData, GovernanceEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
         let proposer_address = signer::address_of(proposer);
         assert!(registry::is_active(proposer_address), error::permission_denied(ENOT_MEMBER));
 
@@ -170,6 +177,8 @@ module windfall::governance {
             proposal_type: PROPOSAL_TYPE_ACTUATOR,
             timestamp: current_time,
         });
+
+        security::end_reentrancy_protection();
     }
 
     public entry fun vote(
@@ -177,6 +186,10 @@ module windfall::governance {
         proposal_id: u64,
         vote: bool
     ) acquires GovernanceData, GovernanceEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
         let voter_address = signer::address_of(voter);
         assert!(registry::is_active(voter_address), error::permission_denied(ENOT_MEMBER));
 
@@ -213,12 +226,18 @@ module windfall::governance {
             vote,
             timestamp: current_time,
         });
+
+        security::end_reentrancy_protection();
     }
 
     public entry fun emergency_veto(
         member: &signer,
         proposal_id: u64
     ) acquires GovernanceData, GovernanceEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
         let member_address = signer::address_of(member);
         assert!(registry::is_active(member_address), error::permission_denied(ENOT_MEMBER));
 
@@ -246,6 +265,8 @@ module windfall::governance {
         } else {
             abort error::invalid_state(EINSUFFICIENT_VOTES)
         };
+
+        security::end_reentrancy_protection();
     }
 
     public entry fun create_trade_proposal(
@@ -302,6 +323,10 @@ module windfall::governance {
         executor: &signer,
         proposal_id: u64
     ) acquires GovernanceData, GovernanceEvents {
+        // Security checks
+        security::assert_not_paused(MODULE_ID);
+        security::start_reentrancy_protection();
+
         let executor_address = signer::address_of(executor);
         assert!(registry::is_active(executor_address), error::permission_denied(ENOT_MEMBER));
 
@@ -342,6 +367,8 @@ module windfall::governance {
             success,
             timestamp: current_time,
         });
+
+        security::end_reentrancy_protection();
     }
 
     #[view]

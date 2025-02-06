@@ -1,7 +1,8 @@
 [package]
 name = "Windfall"
 version = "1.0.0"
-authors = []
+authors = ["saint0x <https://github.com/saint0x>"]
+license = "Apache-2.0"
 
 [addresses]
 windfall = "_"
@@ -10,8 +11,8 @@ windfall = "_"
 windfall = "0x1"
 
 [dependencies]
-AptosFramework = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-framework" }
-AptosStdlib = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-stdlib" }
-AptosToken = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-token" }
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-framework", version = "1.0.0" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-stdlib", version = "1.0.0" }
+AptosToken = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "mainnet", subdir = "aptos-token", version = "1.0.0" }
 
 [dev-dependencies]
