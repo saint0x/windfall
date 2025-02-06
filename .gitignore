@@ -38,6 +38,7 @@ data/
 
 # Production configuration
 PROD.md
+CONTRACTS.md
 prod.config.json
 production.config.js
 
@@ -104,3 +105,4 @@ secrets/
 *secret*
 *password*
 *credential*
+
