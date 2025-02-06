@@ -1,46 +1,51 @@
 use std::sync::Arc;
+use tokio::sync::Semaphore;
+use tokio::time::{sleep, Duration, Instant};
 use tokio::sync::Mutex;
-use std::time::Instant;
-use crate::error::{ClientError, Result};
+use crate::error::{AppError, Result};
 
 pub struct RateLimiter {
-    tokens: Arc<Mutex<f64>>,
-    last_update: Arc<Mutex<Instant>>,
-    tokens_per_second: f64,
-    max_tokens: f64,
+    permits: Arc<Semaphore>,
+    replenish_interval: Duration,
+    last_replenish: Instant,
+    last_request: Mutex<Instant>,
+    min_interval: Duration,
 }
 
 impl RateLimiter {
     pub fn new(requests_per_second: u32, burst_limit: u32) -> Self {
         Self {
-            tokens: Arc::new(Mutex::new(burst_limit as f64)),
-            last_update: Arc::new(Mutex::new(Instant::now())),
-            tokens_per_second: requests_per_second as f64,
-            max_tokens: burst_limit as f64,
+            permits: Arc::new(Semaphore::new(burst_limit as usize)),
+            replenish_interval: Duration::from_secs_f64(1.0 / requests_per_second as f64),
+            last_replenish: Instant::now(),
+            last_request: Mutex::new(Instant::now()),
+            min_interval: Duration::from_secs(1) / requests_per_second,
         }
     }
 
     pub async fn acquire_permit(&self) -> Result<()> {
-        let mut tokens = self.tokens.lock().await;
-        let mut last_update = self.last_update.lock().await;
-
-        let now = Instant::now();
-        let elapsed = now.duration_since(*last_update).as_secs_f64();
-        *last_update = now;
-
-        // Replenish tokens based on elapsed time
-        *tokens = (*tokens + elapsed * self.tokens_per_second).min(self.max_tokens);
-
-        if *tokens >= 1.0 {
-            *tokens -= 1.0;
+        if let Ok(permit) = self.permits.try_acquire() {
+            let elapsed = self.last_replenish.elapsed();
+            if elapsed >= self.replenish_interval {
+                sleep(self.replenish_interval - elapsed).await;
+            }
+            permit.forget();
             Ok(())
         } else {
-            Err(ClientError::RateLimitExceeded)
+            Err(AppError::Internal("Rate limit exceeded".to_string()))
         }
     }
 
-    pub async fn available_tokens(&self) -> f64 {
-        let tokens = self.tokens.lock().await;
-        *tokens
+    pub async fn wait(&self) -> Result<()> {
+        let mut last = self.last_request.lock().await;
+        let now = Instant::now();
+        let elapsed = now.duration_since(*last);
+
+        if elapsed < self.min_interval {
+            tokio::time::sleep(self.min_interval - elapsed).await;
+        }
+
+        *last = Instant::now();
+        Ok(())
     }
 } 

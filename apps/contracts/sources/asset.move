@@ -4,6 +4,7 @@ module windfall::asset {
     use std::string::{Self, String};
     use std::vector;
     use aptos_framework::account;
+    use aptos_framework::coin;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
@@ -13,12 +14,15 @@ module windfall::asset {
     const ENOT_INITIALIZED: u64 = 1;
     const EALREADY_INITIALIZED: u64 = 2;
     const ENOT_AUTHORIZED: u64 = 3;
-    const EASSET_ALREADY_EXISTS: u64 = 4;
-    const EASSET_NOT_FOUND: u64 = 5;
-    const EINSUFFICIENT_BALANCE: u64 = 6;
-    const EINVALID_AMOUNT: u64 = 7;
-    const EUSER_NOT_VERIFIED: u64 = 8;
-    const EFUND_NOT_FOUND: u64 = 9;
+    const ENOT_ACTUATOR: u64 = 4;
+    const EASSET_ALREADY_EXISTS: u64 = 5;
+    const EASSET_NOT_FOUND: u64 = 6;
+    const EINSUFFICIENT_BALANCE: u64 = 7;
+    const EINVALID_AMOUNT: u64 = 8;
+    const EUSER_NOT_VERIFIED: u64 = 9;
+    const EUSER_NOT_MEMBER: u64 = 10;
+    const EFUND_NOT_FOUND: u64 = 11;
+    const EINVALID_SHARE_TOTAL: u64 = 12;
 
     /// Minimum verification level required for asset operations
     const MIN_VERIFICATION_LEVEL: u8 = 1;
@@ -91,6 +95,46 @@ module windfall::asset {
     struct FundStore has key {
         funds: Table<u64, Fund>,
         fund_count: u64,
+    }
+
+    struct FundWallet has key {
+        fund_id: u64,
+        actuator: address,
+        members: vector<Member>,
+        balance: u64,
+    }
+
+    struct Member has store {
+        address: address,
+        ownership_share: u64,  // Basis points (1/10000)
+        joined_at: u64,
+    }
+
+    struct FundEvents has key {
+        investment_events: EventHandle<InvestmentEvent>,
+        withdrawal_events: EventHandle<WithdrawalEvent>,
+        member_update_events: EventHandle<MemberUpdateEvent>,
+    }
+
+    struct InvestmentEvent has drop, store {
+        fund_id: u64,
+        target_address: address,
+        amount: u64,
+        timestamp: u64,
+    }
+
+    struct WithdrawalEvent has drop, store {
+        fund_id: u64,
+        to_address: address,
+        amount: u64,
+        timestamp: u64,
+    }
+
+    struct MemberUpdateEvent has drop, store {
+        fund_id: u64,
+        member_address: address,
+        new_share: u64,
+        timestamp: u64,
     }
 
     public fun initialize(admin: &signer) {
@@ -430,5 +474,179 @@ module windfall::asset {
         assert!(fund.executor == executor_address, error::permission_denied(ENOT_AUTHORIZED));
         
         // Add transaction execution logic here
+    }
+
+    public fun initialize_fund_wallet(
+        creator: &signer,
+        fund_id: u64,
+        actuator: address,
+        initial_members: vector<address>,
+        initial_shares: vector<u64>
+    ) {
+        let creator_addr = signer::address_of(creator);
+        assert!(!exists<FundWallet>(creator_addr), error::already_exists(EALREADY_INITIALIZED));
+        assert!(vector::length(&initial_members) == vector::length(&initial_shares), error::invalid_argument(EINVALID_SHARE_TOTAL));
+        
+        // Validate total shares equal 10000 (100%)
+        let total_shares = 0u64;
+        let i = 0;
+        let len = vector::length(&initial_shares);
+        while (i < len) {
+            total_shares = total_shares + *vector::borrow(&initial_shares, i);
+            i = i + 1;
+        };
+        assert!(total_shares == 10000, error::invalid_argument(EINVALID_SHARE_TOTAL));
+
+        // Create member list
+        let members = vector::empty<Member>();
+        let i = 0;
+        while (i < len) {
+            vector::push_back(&mut members, Member {
+                address: *vector::borrow(&initial_members, i),
+                ownership_share: *vector::borrow(&initial_shares, i),
+                joined_at: timestamp::now_microseconds(),
+            });
+            i = i + 1;
+        };
+
+        // Initialize wallet
+        move_to(creator, FundWallet {
+            fund_id,
+            actuator,
+            members,
+            balance: 0,
+        });
+
+        // Initialize events
+        move_to(creator, FundEvents {
+            investment_events: account::new_event_handle<InvestmentEvent>(creator),
+            withdrawal_events: account::new_event_handle<WithdrawalEvent>(creator),
+            member_update_events: account::new_event_handle<MemberUpdateEvent>(creator),
+        });
+    }
+
+    public entry fun invest(
+        actuator: &signer,
+        fund_addr: address,
+        target: address,
+        amount: u64
+    ) acquires FundWallet, FundEvents {
+        let actuator_addr = signer::address_of(actuator);
+        let fund = borrow_global_mut<FundWallet>(fund_addr);
+        
+        // Verify actuator
+        assert!(actuator_addr == fund.actuator, error::permission_denied(ENOT_ACTUATOR));
+        assert!(fund.balance >= amount, error::invalid_argument(EINVALID_AMOUNT));
+
+        // Execute investment
+        coin::transfer<AptosCoin>(actuator, target, amount);
+        fund.balance = fund.balance - amount;
+
+        // Emit event
+        let events = borrow_global_mut<FundEvents>(fund_addr);
+        event::emit_event(&mut events.investment_events, InvestmentEvent {
+            fund_id: fund.fund_id,
+            target_address: target,
+            amount,
+            timestamp: timestamp::now_microseconds(),
+        });
+    }
+
+    public entry fun withdraw_profits(
+        actuator: &signer,
+        fund_addr: address,
+        amount: u64
+    ) acquires FundWallet, FundEvents {
+        let actuator_addr = signer::address_of(actuator);
+        let fund = borrow_global_mut<FundWallet>(fund_addr);
+        
+        // Verify actuator
+        assert!(actuator_addr == fund.actuator, error::permission_denied(ENOT_ACTUATOR));
+        assert!(fund.balance >= amount, error::invalid_argument(EINVALID_AMOUNT));
+
+        // Calculate and distribute profits
+        let i = 0;
+        let len = vector::length(&fund.members);
+        while (i < len) {
+            let member = vector::borrow(&fund.members, i);
+            let member_share = (amount * member.ownership_share) / 10000;
+            if (member_share > 0) {
+                coin::transfer<AptosCoin>(actuator, member.address, member_share);
+            };
+            i = i + 1;
+        };
+
+        fund.balance = fund.balance - amount;
+
+        // Emit event
+        let events = borrow_global_mut<FundEvents>(fund_addr);
+        event::emit_event(&mut events.withdrawal_events, WithdrawalEvent {
+            fund_id: fund.fund_id,
+            to_address: actuator_addr,
+            amount,
+            timestamp: timestamp::now_microseconds(),
+        });
+    }
+
+    public entry fun update_member_share(
+        actuator: &signer,
+        fund_addr: address,
+        member_addr: address,
+        new_share: u64
+    ) acquires FundWallet, FundEvents {
+        let actuator_addr = signer::address_of(actuator);
+        let fund = borrow_global_mut<FundWallet>(fund_addr);
+        
+        // Verify actuator
+        assert!(actuator_addr == fund.actuator, error::permission_denied(ENOT_ACTUATOR));
+
+        // Update member share
+        let i = 0;
+        let len = vector::length(&fund.members);
+        let found = false;
+        let total_shares = 0u64;
+
+        while (i < len) {
+            let member = vector::borrow_mut(&mut fund.members, i);
+            if (member.address == member_addr) {
+                member.ownership_share = new_share;
+                found = true;
+            };
+            total_shares = total_shares + member.ownership_share;
+            i = i + 1;
+        };
+
+        assert!(found, error::not_found(EUSER_NOT_MEMBER));
+        assert!(total_shares == 10000, error::invalid_argument(EINVALID_SHARE_TOTAL));
+
+        // Emit event
+        let events = borrow_global_mut<FundEvents>(fund_addr);
+        event::emit_event(&mut events.member_update_events, MemberUpdateEvent {
+            fund_id: fund.fund_id,
+            member_address: member_addr,
+            new_share,
+            timestamp: timestamp::now_microseconds(),
+        });
+    }
+
+    #[view]
+    public fun get_member_share(fund_addr: address, member_addr: address): u64 acquires FundWallet {
+        let fund = borrow_global<FundWallet>(fund_addr);
+        let i = 0;
+        let len = vector::length(&fund.members);
+        
+        while (i < len) {
+            let member = vector::borrow(&fund.members, i);
+            if (member.address == member_addr) {
+                return member.ownership_share
+            };
+            i = i + 1;
+        };
+        0
+    }
+
+    #[view]
+    public fun get_fund_balance(fund_addr: address): u64 acquires FundWallet {
+        borrow_global<FundWallet>(fund_addr).balance
     }
 } 

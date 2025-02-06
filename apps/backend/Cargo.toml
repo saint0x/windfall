@@ -4,16 +4,28 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0"
-aptos-sdk = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "2c74a776d5e3b8b3d3f5c77e7e9dc10f4b4c7bc5" }
-chrono = { version = "0.4", features = ["serde"] }
+actix-web = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+dotenv = "0.15.0"
+env_logger = "0.10.0"
+log = "0.4.20"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+async-trait = "0.1"
+aptos-sdk = { workspace = true }
 hex = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
-thiserror = "1.0"
-tokio = { version = "1.0", features = ["full"] }
 url = "2.4"
+thiserror = "1.0"
 
 [dev-dependencies]
-tokio-test = "0.4"
+mockall = { workspace = true }
+actix-rt = { workspace = true }
+
+[patch.crates-io]
+merlin = { git = "https://github.com/aptos-labs/merlin" }
+x25519-dalek = { git = "https://github.com/aptos-labs/x25519-dalek", branch = "zeroize_v1" }
