@@ -39,6 +39,7 @@ data/
 # Production configuration
 PROD.md
 CONTRACTS.md
+INTEGRATION.md
 prod.config.json
 production.config.js
 
