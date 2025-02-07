@@ -1,10 +1,10 @@
-script {
+module windfall::deploy {
     use windfall::security;
     use windfall::registry;
     use windfall::position;
     use windfall::governance;
 
-    fun deploy(admin: &signer) {
+    public entry fun deploy(admin: &signer) {
         // Initialize modules in order
         security::initialize(admin);
         registry::initialize(admin);

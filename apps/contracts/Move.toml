@@ -5,10 +5,10 @@ authors = ["saint0x <https://github.com/saint0x>"]
 license = "Apache-2.0"
 
 [addresses]
-windfall = "0x8a992631d9eb1fddefb767c917abf58071ff5d7f52748e7dbf4fd005a67e91d3"
+windfall = "0x69229b793f4887833847bd71d94f0f628fab1da32473d6fec1e183da9ffafcf7"
 
 [dev-addresses]
-windfall = "0x1"
+windfall = "0x69229b793f4887833847bd71d94f0f628fab1da32473d6fec1e183da9ffafcf7"
 
 [dependencies]
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-framework.git", rev = "testnet", subdir = "aptos-framework", version = "1.0.0" }
