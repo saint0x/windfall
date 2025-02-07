@@ -10,11 +10,11 @@ Track fund performance, member allocations, and asset distribution in real-time.
 
 ![Asset Management](screens-unfinished/3.png)
 
-Monitor asset positions and market performance across your portfolio.
+Create and vote on investment proposals with detailed analytics.
 
 ![Proposal System](screens-unfinished/4.png)
 
-Create and vote on investment proposals with detailed analytics.
+Monitor asset positions and market performance across your portfolio.
 
 ## Quick Start
 
