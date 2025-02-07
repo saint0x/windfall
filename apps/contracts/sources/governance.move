@@ -2,10 +2,12 @@ module windfall::governance {
     use std::error;
     use std::signer;
     use std::string::String;
+    use std::bcs;
     use aptos_framework::account;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
+    use aptos_std::from_bcs;
     use windfall::registry;
     use windfall::security;
 
@@ -162,7 +164,7 @@ module windfall::governance {
             votes_yes: 0,
             votes_no: 0,
             total_eligible_votes: registry::get_active_users(),
-            payload: std::bcs::to_bytes(&new_actuator),
+            payload: bcs::to_bytes(&new_actuator),
         };
 
         table::add(&mut governance_data.proposals, proposal_id, proposal);
@@ -248,7 +250,6 @@ module windfall::governance {
         let proposal = table::borrow_mut(&mut governance_data.proposals, proposal_id);
         assert!(!proposal.executed, error::invalid_state(EPROPOSAL_ALREADY_EXECUTED));
 
-        let votes = table::borrow(&governance_data.votes, proposal_id);
         let total_votes = proposal.votes_yes + proposal.votes_no;
         
         // Check if veto threshold is met
@@ -302,7 +303,7 @@ module windfall::governance {
             votes_yes: 0,
             votes_no: 0,
             total_eligible_votes: registry::get_active_users(),
-            payload: std::bcs::to_bytes(&trade_info),
+            payload: bcs::to_bytes(&trade_info),
         };
 
         table::add(&mut governance_data.proposals, proposal_id, proposal);
@@ -353,7 +354,8 @@ module windfall::governance {
             // Handle different proposal types
             if (proposal.proposal_type.code == PROPOSAL_TYPE_ACTUATOR) {
                 // Update actuator in position contract
-                let new_actuator: address = std::bcs::from_bytes(&proposal.payload);
+                let payload_bytes = *&proposal.payload;
+                let new_actuator = from_bcs::to_address(payload_bytes);
                 windfall::position::set_actuator(executor, new_actuator);
             };
             // Note: Trade execution will be handled by the actuator off-chain

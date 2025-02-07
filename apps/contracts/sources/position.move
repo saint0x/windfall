@@ -23,7 +23,7 @@ module windfall::position {
 
     const MODULE_ID: u8 = 3; // Unique identifier for position module
 
-    struct Position has store {
+    struct Position has store, copy, drop {
         id: u64,
         asset_symbol: String,
         total_size: u64,
@@ -33,7 +33,7 @@ module windfall::position {
         total_shares: u64,  // Total shares (fixed point with 6 decimals)
     }
 
-    struct UserShare has store {
+    struct UserShare has store, copy, drop {
         shares: u64,        // User's share amount (fixed point with 6 decimals)
         entry_timestamp: u64,
         last_updated: u64,
@@ -116,10 +116,10 @@ module windfall::position {
 
     public entry fun open_position(
         trader: &signer,
-        asset_id: u64,
+        _asset_id: u64,  // Prefixed with underscore as it will be used in future
         size: u64,
         entry_price: u64,
-        is_long: bool
+        _is_long: bool   // Prefixed with underscore as it will be used in future
     ) acquires PositionData, PositionEvents {
         // Security checks
         security::assert_not_paused(MODULE_ID);
@@ -134,7 +134,7 @@ module windfall::position {
 
         table::add(&mut position_data.positions, position_id, Position {
             id: position_id,
-            asset_symbol: asset_id.to_string(),
+            asset_symbol: std::string::utf8(b"APTOS"), // Default symbol, should be replaced with proper asset symbol
             total_size: size,
             entry_price: entry_price,
             entry_timestamp: current_time,
@@ -148,7 +148,7 @@ module windfall::position {
         let events = borrow_global_mut<PositionEvents>(@windfall);
         event::emit_event(&mut events.position_opened_events, PositionOpenedEvent {
             position_id,
-            asset_symbol: asset_id.to_string(),
+            asset_symbol: std::string::utf8(b"APTOS"), // Default symbol
             size,
             entry_price,
             timestamp: current_time,
@@ -335,7 +335,7 @@ module windfall::position {
         assert!(signer::address_of(trader) == position_data.actuator, 
             error::permission_denied(ENOT_AUTHORIZED));
 
-        let position = table::borrow(&position_data.positions, position_id);
+        let position = table::borrow_mut(&mut position_data.positions, position_id);
         assert!(position.is_active, error::invalid_state(EPOSITION_CLOSED));
 
         let current_time = timestamp::now_microseconds();

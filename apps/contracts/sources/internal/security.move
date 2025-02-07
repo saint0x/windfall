@@ -1,6 +1,7 @@
 module windfall::security {
     use std::error;
     use std::signer;
+    use std::vector;
     use aptos_framework::account;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;

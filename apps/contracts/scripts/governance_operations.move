@@ -1,28 +1,31 @@
 script {
+    use std::string;
     use windfall::governance;
 
-    /// Called by backend when a member votes on a proposal
-    public entry fun submit_vote(
-        voter: &signer,
+    const OPERATION_VETO: u8 = 0;
+    const OPERATION_TRADE: u8 = 1;
+
+    fun main(
+        caller: &signer,
+        operation: u8,
         proposal_id: u64,
-        approve: bool
+        asset_symbol: vector<u8>,
+        size: u64,
+        price: u64,
+        is_entry: bool,
+        description: vector<u8>
     ) {
-        governance::vote(voter, proposal_id, approve);
-    }
-
-    /// Called by backend when members initiate emergency veto
-    public entry fun trigger_emergency_veto(
-        member: &signer,
-        proposal_id: u64
-    ) {
-        governance::emergency_veto(member, proposal_id);
-    }
-
-    /// Called by backend to execute an approved proposal
-    public entry fun execute_approved_proposal(
-        executor: &signer,
-        proposal_id: u64
-    ) {
-        governance::execute_proposal(executor, proposal_id);
+        if (operation == OPERATION_VETO) {
+            governance::emergency_veto(caller, proposal_id);
+        } else if (operation == OPERATION_TRADE) {
+            governance::create_trade_proposal(
+                caller,
+                string::utf8(asset_symbol),
+                size,
+                price,
+                is_entry,
+                string::utf8(description)
+            );
+        };
     }
 } 

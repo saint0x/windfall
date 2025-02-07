@@ -1,15 +1,16 @@
 module windfall::asset {
     use std::error;
     use std::signer;
-    use std::string::{Self, String};
+    use std::string::String;
     use std::vector;
     use aptos_framework::account;
     use aptos_framework::coin;
+    use aptos_framework::aptos_coin::AptosCoin;
     use aptos_framework::event::{Self, EventHandle};
     use aptos_framework::timestamp;
     use aptos_std::table::{Self, Table};
     use windfall::registry;
-    use aptos_framework::security;
+    use windfall::security;
 
     /// Error codes
     const ENOT_INITIALIZED: u64 = 1;
@@ -93,6 +94,7 @@ module windfall::asset {
         members: vector<address>,
         created_at: u64,
         metadata: Table<String, String>,
+        metadata_keys: vector<String>,  // Track keys separately for iteration
     }
 
     struct FundStore has key {
@@ -418,6 +420,7 @@ module windfall::asset {
         
         let fund_id = fund_store.fund_count + 1;
         let metadata = table::new();
+        let metadata_keys_copy = copy metadata_keys;
         
         // Add all metadata key-value pairs
         let i = 0;
@@ -436,6 +439,7 @@ module windfall::asset {
             members: initial_members,
             created_at: timestamp::now_microseconds(),
             metadata,
+            metadata_keys: metadata_keys_copy,
         });
         
         fund_store.fund_count = fund_id;
@@ -448,13 +452,13 @@ module windfall::asset {
         assert!(table::contains(&fund_store.funds, fund_id), error::not_found(EFUND_NOT_FOUND));
         
         let fund = table::borrow(&fund_store.funds, fund_id);
-        let metadata_keys = table::keys(&fund.metadata);
         let metadata_values = vector::empty();
         
+        // Collect all metadata values using the tracked keys
         let i = 0;
-        let len = vector::length(&metadata_keys);
+        let len = vector::length(&fund.metadata_keys);
         while (i < len) {
-            let key = vector::borrow(&metadata_keys, i);
+            let key = vector::borrow(&fund.metadata_keys, i);
             let value = table::borrow(&fund.metadata, *key);
             vector::push_back(&mut metadata_values, *value);
             i = i + 1;
@@ -466,7 +470,7 @@ module windfall::asset {
             fund.executor,
             fund.members,
             fund.created_at,
-            metadata_keys,
+            fund.metadata_keys,
             metadata_values
         )
     }

@@ -1,0 +1,9 @@
+---
+profiles:
+  windfall_deploy:
+    network: Local
+    private_key: "0x48302e8198392c315a2a6a71bce1efd340a9a702547b6c64ac875b96f968e2d2"
+    public_key: "0xcce99860cfc2c938dc0363ae2ee4da5cb42fe7eabd14226b143881a28398c459"
+    account: 8a992631d9eb1fddefb767c917abf58071ff5d7f52748e7dbf4fd005a67e91d3
+    rest_url: "http://localhost:8080"
+    faucet_url: "http://localhost:8081"

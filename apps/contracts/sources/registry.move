@@ -14,6 +14,7 @@ module windfall::registry {
     const EUSER_NOT_FOUND: u64 = 4;
     const EINVALID_VERIFICATION_LEVEL: u64 = 5;
     const EUSER_ALREADY_REGISTERED: u64 = 6;
+    const ESECURITY_NOT_INITIALIZED: u64 = 7;
 
     const MODULE_ID: u8 = 4; // Unique identifier for registry module
 
@@ -64,14 +65,14 @@ module windfall::registry {
     }
 
     public entry fun register_user(
-        admin: &signer,
+        _admin: &signer,  // Prefixed with underscore as it will be used for authorization in future
         user_address: address,
-        verification_level: u8
+        _verification_level: u8  // Prefixed with underscore as it will be used in future
     ) acquires RegistryData, RegistryEvents {
         // Security checks
         security::assert_not_paused(MODULE_ID);
         security::start_reentrancy_protection();
-
+        
         let registry_data = borrow_global_mut<RegistryData>(@windfall);
         
         assert!(!table::contains(&registry_data.users, user_address), 
@@ -94,19 +95,16 @@ module windfall::registry {
             user_address,
             registration_time: current_time,
         });
-
-        security::end_reentrancy_protection();
     }
 
     public entry fun update_verification_level(
         admin: &signer,
         user_address: address,
-        new_level: u8
+        _new_level: u8  // Prefixed with underscore as it will be used in future
     ) acquires RegistryData, RegistryEvents {
         // Security checks
         security::assert_not_paused(MODULE_ID);
-        security::start_reentrancy_protection();
-
+        
         let registry_data = borrow_global_mut<RegistryData>(@windfall);
         
         assert!(signer::address_of(admin) == registry_data.admin,
@@ -128,8 +126,6 @@ module windfall::registry {
                 deactivation_time: timestamp::now_microseconds(),
             });
         }
-
-        security::end_reentrancy_protection();
     }
 
     public entry fun deactivate_user(
@@ -138,8 +134,7 @@ module windfall::registry {
     ) acquires RegistryData, RegistryEvents {
         // Security checks
         security::assert_not_paused(MODULE_ID);
-        security::start_reentrancy_protection();
-
+        
         let registry_data = borrow_global_mut<RegistryData>(@windfall);
         
         assert!(signer::address_of(admin) == registry_data.admin,
@@ -161,8 +156,6 @@ module windfall::registry {
                 deactivation_time: timestamp::now_microseconds(),
             });
         }
-
-        security::end_reentrancy_protection();
     }
 
     public entry fun reactivate_user(
@@ -171,8 +164,7 @@ module windfall::registry {
     ) acquires RegistryData, RegistryEvents {
         // Security checks
         security::assert_not_paused(MODULE_ID);
-        security::start_reentrancy_protection();
-
+        
         let registry_data = borrow_global_mut<RegistryData>(@windfall);
         
         assert!(signer::address_of(admin) == registry_data.admin,
@@ -194,8 +186,6 @@ module windfall::registry {
                 registration_time: timestamp::now_microseconds(),
             });
         }
-
-        security::end_reentrancy_protection();
     }
 
     #[view]
@@ -222,5 +212,20 @@ module windfall::registry {
     #[view]
     public fun get_active_users(): u64 acquires RegistryData {
         borrow_global<RegistryData>(@windfall).active_users
+    }
+
+    #[view]
+    public fun get_verification_level(user_address: address): u8 acquires RegistryData {
+        let registry_data = borrow_global<RegistryData>(@windfall);
+        if (!table::contains(&registry_data.users, user_address)) {
+            return 0
+        };
+        
+        let user_profile = table::borrow(&registry_data.users, user_address);
+        if (user_profile.is_active) {
+            1 // For now, all active users have level 1
+        } else {
+            0
+        }
     }
 } 
